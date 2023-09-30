@@ -3,14 +3,14 @@ S = gets.chomp!
 T = gets.chomp!
 
 def calc
-  return 3 if N > M
-
   return 0 if T == S
 
   starts = T.start_with?(S)
   ends = T.end_with?(S)
 
-  if starts && !ends
+  if starts && ends
+    0
+  elsif starts && !ends
     1
   elsif !starts && ends
     2
