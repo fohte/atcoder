@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat << EOF
+  Usage: $0 <command>
+EOF
+}
+
+contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+case $1 in
+  new)
+    shift
+    if [[ $# -eq 0 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    cd "$contests_dir"
+
+    npx acc new "$contest_name"
+    cd "$contest_name"
+    git add .
+    git commit -m "$contest_name: init"
+    ;;
+
+  # acc add -c next
+  next)
+    shift
+    if [[ $# -eq 0 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    cd "$contests_dir/$contest_name"
+
+    npx acc add -c next
+    git add .
+    git commit -m "$contest_name/a: init"
+    ;;
+
+  # atc submit <contest-name> <problem-name>
+  submit)
+    shift
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name"
+
+    npx acc submit "$problem_name"
+    git add .
+    git commit -m "$contest_name/$problem_name: submit"
+    ;;
+
+  # open $EDITOR to edit the problem
+  # usage: atc edit <contest-name> <problem-name>
+  edit) ;;
+
+  # run test cases
+  # usage: atc test <contest-name> <problem-name>
+  test)
+    shift
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name"
+
+    npx acc test "$problem_name"
+    ;;
+  ;;
+
+  *)
+    usage
+    exit 1
+    ;;
+esac
