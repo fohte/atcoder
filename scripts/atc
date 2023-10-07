@@ -4,18 +4,36 @@ set -euo pipefail
 
 usage() {
   cat << EOF
-  Usage: $0 <command>
+Usage: $0 <command>
+
+Commands:
+  new <contest-name>      Create a new contest
+  next <contest-name>     Add a new problem to the contest
+  submit <contest-name> <problem-name>
+                          Submit the solution to the problem
+  edit <contest-name> <problem-name>
+                          Open $EDITOR to edit the problem
+  test <contest-name> <problem-name>
+                          Run test cases
 EOF
 }
-
-contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
 
 if [[ $# -eq 0 ]]; then
   usage
   exit 1
 fi
 
+contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
+echo "$contests_dir"
+
+commit() {
+  message="$1"
+  git add "$contests_dir"
+  git commit -m "$message"
+}
+
 case $1 in
+  # atc new <contest-name>
   new)
     shift
     if [[ $# -eq 0 ]]; then
@@ -27,13 +45,11 @@ case $1 in
 
     cd "$contests_dir"
 
-    npx acc new "$contest_name"
-    cd "$contest_name"
-    git add .
-    git commit -m "$contest_name: init"
+    npx acc new "$contest_name" --choice none
+    commit "$contest_name: init"
     ;;
 
-  # acc add -c next
+  # atc next <contest-name>
   next)
     shift
     if [[ $# -eq 0 ]]; then
@@ -46,8 +62,14 @@ case $1 in
     cd "$contests_dir/$contest_name"
 
     npx acc add -c next
-    git add .
-    git commit -m "$contest_name/a: init"
+
+    problem_name="$(
+      jq -r \
+        'last(.tasks[] | .directory | select(. != null)) | .path' \
+        contest.acc.json
+    )"
+
+    commit "$contest_name/$problem_name: init"
     ;;
 
   # atc submit <contest-name> <problem-name>
@@ -61,16 +83,28 @@ case $1 in
     contest_name="$1"
     problem_name="$2"
 
-    cd "$contests_dir/$contest_name"
+    cd "$contests_dir/$contest_name/$problem_name"
 
-    npx acc submit "$problem_name"
-    git add .
-    git commit -m "$contest_name/$problem_name: submit"
+    npx acc submit 'main.rb'
+    commit "$contest_name/$problem_name: submit"
     ;;
 
   # open $EDITOR to edit the problem
   # usage: atc edit <contest-name> <problem-name>
-  edit) ;;
+  edit)
+    shift
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name/$problem_name"
+
+    $EDITOR main.rb
+    ;;
 
   # run test cases
   # usage: atc test <contest-name> <problem-name>
@@ -84,11 +118,10 @@ case $1 in
     contest_name="$1"
     problem_name="$2"
 
-    cd "$contests_dir/$contest_name"
+    cd "$contests_dir/$contest_name/$problem_name"
 
-    npx acc test "$problem_name"
+    oj t -c 'ruby main.rb' -d 'tests'
     ;;
-  ;;
 
   *)
     usage
