@@ -24,7 +24,6 @@ if [[ $# -eq 0 ]]; then
 fi
 
 contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
-echo "$contests_dir"
 
 commit() {
   message="$1"
@@ -91,9 +90,12 @@ case "$subcommand" in
 
     cd "$contests_dir/$contest_name/$problem_name"
 
-    oj submit --yes \
-      "https://atcoder.jp/contests/$contest_name/tasks/$problem_name" \
-      main.rb
+    url="$(jq -r \
+      --arg dir "$problem_name" \
+      '.tasks[] | select(.directory.path == $dir) | .url' \
+      "$contests_dir/$contest_name/contest.acc.json")"
+
+    oj submit --yes "$url" main.rb
 
     commit "$contest_name/$problem_name: submit"
     ;;
