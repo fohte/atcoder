@@ -1,11 +1,11 @@
-Metrics/MethodLength:
-  Enabled: false
-
-Metrics/PerceivedComplexity:
-  Enabled: false
-
-Metrics/CyclomaticComplexity:
+Metrics:
   Enabled: false
 
 Naming/MethodParameterName:
+  Enabled: false
+
+Lint:
+  AutoCorrect: false
+
+Style/FrozenStringLiteralComment:
   Enabled: false
