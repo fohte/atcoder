@@ -91,7 +91,10 @@ case "$subcommand" in
 
     cd "$contests_dir/$contest_name/$problem_name"
 
-    npx acc submit 'main.rb'
+    oj submit --yes \
+      "https://atcoder.jp/contests/$contest_name/tasks/$problem_name" \
+      main.rb
+
     commit "$contest_name/$problem_name: submit"
     ;;
 
