@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat << EOF
+Usage: $0 <command>
+
+Commands:
+  new <contest-name>      Create a new contest
+  next <contest-name>     Add a new problem to the contest
+  submit <contest-name> <problem-name>
+                          Submit the solution to the problem
+  edit <contest-name> <problem-name>
+                          Open $EDITOR to edit the problem
+  test <contest-name> <problem-name>
+                          Run test cases
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
+
+commit() {
+  message="$1"
+  git add "$contests_dir"
+  git commit -m "$message"
+}
+
+subcommand="$1"
+shift
+
+case "$subcommand" in
+  # atc new <contest-name>
+  new)
+    if [[ $# -eq 0 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    cd "$contests_dir"
+
+    npx acc new "$contest_name" --choice none
+
+    git checkout -b "$contest_name" origin/master
+    commit "$contest_name: init"
+    ;;
+
+  # atc next <contest-name>
+  next)
+    if [[ $# -eq 0 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    cd "$contests_dir/$contest_name"
+
+    npx acc add -c next
+
+    added_task="$(
+      jq -r \
+        'last(.tasks[] | select(.directory != null))' \
+        contest.acc.json
+    )"
+
+    problem_name="$(jq -r '.directory.path' <<< "$added_task")"
+
+    commit "$contest_name/$problem_name: init"
+
+    open "$(jq -r '.url' <<< "$added_task")"
+    ;;
+
+  # atc submit <contest-name> <problem-name>
+  submit)
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name/$problem_name"
+
+    url="$(jq -r \
+      --arg dir "$problem_name" \
+      '.tasks[] | select(.directory.path == $dir) | .url' \
+      "$contests_dir/$contest_name/contest.acc.json")"
+
+    oj submit --yes "$url" main.rb
+
+    commit "$contest_name/$problem_name: submit"
+    ;;
+
+  # open $EDITOR to edit the problem
+  # usage: atc edit <contest-name> <problem-name>
+  edit)
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name/$problem_name"
+
+    $EDITOR main.rb
+    ;;
+
+  # run test cases
+  # usage: atc test <contest-name> <problem-name>
+  test)
+    if [[ $# -ne 2 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+    problem_name="$2"
+
+    cd "$contests_dir/$contest_name/$problem_name"
+
+    oj t -c 'ruby main.rb' -d 'tests'
+    ;;
+
+  # create a pull request
+  # usage: atc create-pr <contest-name>
+  create-pr)
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    json="$contests_dir/$contest_name/contest.acc.json"
+
+    gh pr create \
+      --title "$(jq '.contest.id' "$json"): $(jq '.contest.title' "$json")" \
+      --body "$(jq 'contest.url' "$json")" \
+      --base master \
+      --head "$contest_name"
+    ;;
+
+  *)
+    usage
+    exit 1
+    ;;
+esac
