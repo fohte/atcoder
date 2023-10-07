@@ -32,10 +32,12 @@ commit() {
   git commit -m "$message"
 }
 
-case $1 in
+subcommand="$1"
+shift
+
+case "$subcommand" in
   # atc new <contest-name>
   new)
-    shift
     if [[ $# -eq 0 ]]; then
       usage
       exit 1
@@ -51,7 +53,6 @@ case $1 in
 
   # atc next <contest-name>
   next)
-    shift
     if [[ $# -eq 0 ]]; then
       usage
       exit 1
@@ -63,18 +64,21 @@ case $1 in
 
     npx acc add -c next
 
-    problem_name="$(
+    added_task="$(
       jq -r \
-        'last(.tasks[] | .directory | select(. != null)) | .path' \
+        'last(.tasks[] | select(.directory != null))' \
         contest.acc.json
     )"
 
+    problem_name="$(jq -r '.directory.path' <<< "$added_task")"
+
     commit "$contest_name/$problem_name: init"
+
+    open "$(jq -r '.url' <<< "$added_task")"
     ;;
 
   # atc submit <contest-name> <problem-name>
   submit)
-    shift
     if [[ $# -ne 2 ]]; then
       usage
       exit 1
@@ -92,7 +96,6 @@ case $1 in
   # open $EDITOR to edit the problem
   # usage: atc edit <contest-name> <problem-name>
   edit)
-    shift
     if [[ $# -ne 2 ]]; then
       usage
       exit 1
@@ -109,7 +112,6 @@ case $1 in
   # run test cases
   # usage: atc test <contest-name> <problem-name>
   test)
-    shift
     if [[ $# -ne 2 ]]; then
       usage
       exit 1
