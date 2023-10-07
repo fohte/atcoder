@@ -6,14 +6,16 @@ scores = Ss.map.with_index do |s, _i|
   s.chars.map.with_index { |v, j| v == 'o' ? As[j] : 0 }
 end
 
-SORTED_SS = scores.map.with_index.sort_by { |s, _| s }.reverse
+SORTED_AS = As.map.with_index.sort_by { |a, _| a }.reverse
 
 def calc(me, other, me_bonus, other_bonus)
-  other_score = other.sum + other_bonus
+  other_score = other.sum + other_bonus + 1
   count = 0
-  new_score = me.sum + me_bonus
+  new_score = me.sum + me_bonus + 1
 
-  SORTED_SS.each do |_s, j|
+  return 0 if other_score < new_score
+
+  SORTED_AS.each do |_s, j|
     next if me[j] != 0
 
     return count if other_score < new_score
