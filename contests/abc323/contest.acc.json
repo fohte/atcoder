@@ -29,7 +29,11 @@
       "id": "abc323_c",
       "label": "C",
       "title": "World Tour Finals",
-      "url": "https://atcoder.jp/contests/abc323/tasks/abc323_c"
+      "url": "https://atcoder.jp/contests/abc323/tasks/abc323_c",
+      "directory": {
+        "path": "c",
+        "testdir": "tests"
+      }
     },
     {
       "id": "abc323_d",
