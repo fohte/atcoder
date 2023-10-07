@@ -48,6 +48,8 @@ case "$subcommand" in
     cd "$contests_dir"
 
     npx acc new "$contest_name" --choice none
+
+    git checkout -b "$contest_name" origin/master
     commit "$contest_name: init"
     ;;
 
@@ -123,6 +125,25 @@ case "$subcommand" in
     cd "$contests_dir/$contest_name/$problem_name"
 
     oj t -c 'ruby main.rb' -d 'tests'
+    ;;
+
+  # create a pull request
+  # usage: atc create-pr <contest-name>
+  create-pr)
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 1
+    fi
+
+    contest_name="$1"
+
+    json="$contests_dir/$contest_name/contest.acc.json"
+
+    gh pr create \
+      --title "$(jq '.contest.id' "$json"): $(jq '.contest.title' "$json")" \
+      --body "$(jq 'contest.url' "$json")" \
+      --base master \
+      --head "$contest_name"
     ;;
 
   *)
