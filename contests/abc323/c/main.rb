@@ -3,7 +3,7 @@ As = gets.chomp!.split.map(&:to_i)
 Ss = N.times.map { gets.chomp! }
 
 scores = Ss.map.with_index do |s, i|
-  s.chars.map { |v, j| v == 'o' ? As[j] + i + 1 : 0 }
+  s.chars.map.with_index { |v, j| v == 'o' ? As[j] + i + 1 : 0 }
 end
 
 SORTED_SS = scores.map.with_index.sort_by { |s, _| s }.reverse
