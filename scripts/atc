@@ -145,8 +145,8 @@ case "$subcommand" in
     json="$contests_dir/$contest_name/contest.acc.json"
 
     gh pr create \
-      --title "$(jq '.contest.id' "$json"): $(jq '.contest.title' "$json")" \
-      --body "$(jq 'contest.url' "$json")" \
+      --title "$(jq -r '.contest.id' "$json"): $(jq -r '.contest.title' "$json")" \
+      --body "$(jq -r '.contest.url' "$json")" \
       --base master \
       --head "$contest_name"
     ;;
