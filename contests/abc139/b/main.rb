@@ -1,3 +1,3 @@
 A, B, = gets.split.map(&:to_i)
 
-puts(B / A + (A % B == 0 ? 0 : 1))
+puts(((B - 1) / (A - 1).to_f).ceil)
