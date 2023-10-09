@@ -3,19 +3,42 @@
 set -euo pipefail
 
 usage() {
-  cat << EOF
-Usage: $0 <command>
+  cat <<- EOM
+Usage: ${0} <subcommand> <args>
 
-Commands:
-  new <contest-name>      Create a new contest
-  next <contest-name>     Add a new problem to the contest
-  submit <contest-name> <problem-name>
-                          Submit the solution to the problem
-  edit <contest-name> <problem-name>
-                          Open $EDITOR to edit the problem
-  test <contest-name> <problem-name>
-                          Run test cases
-EOF
+Subcommands:
+  new <contest-url|contest-id>
+    Initialize a new contest.
+
+  submit <problem-url>
+  submit <contest-id> <problem-id>
+    Submit the solution for a problem.
+
+  edit <problem-url>
+  edit <contest-id> <problem-id>
+    Edit the solution for a problem using $EDITOR.
+
+  test <problem-url>
+  test <contest-id> <problem-id>
+    Test the solution for a problem.
+
+  create-pr <contest-url|contest-id>
+    Create a pull request for a contest.
+
+Arguments:
+  <contest-url>: URL of the contest (e.g., https://atcoder.jp/contests/abc123)
+  <problem-url>: URL of the problem (e.g., https://atcoder.jp/contests/abc123/tasks/problem_a)
+  <contest-id>: ID of the contest (e.g., abc123)
+  <problem-id>: ID of the problem (e.g., problem_a)
+
+Examples:
+  ${0} new https://atcoder.jp/contests/abc123
+  ${0} submit https://atcoder.jp/contests/abc123/tasks/problem_a
+  ${0} submit abc123 problem_a
+  ${0} edit abc123 problem_a
+  ${0} test abc123 problem_a
+  ${0} create-pr abc123
+EOM
 }
 
 if [[ $# -eq 0 ]]; then
@@ -34,84 +57,76 @@ commit() {
 subcommand="$1"
 shift
 
-case "$subcommand" in
-  # atc new <contest-name>
-  new)
-    if [[ $# -eq 0 ]]; then
-      usage
-      exit 1
-    fi
+if [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+)/tasks/([a-z0-9_]+) ]]; then
+  contest_id="${BASH_REMATCH[1]}"
+  problem_id="${BASH_REMATCH[2]}"
+elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+) ]]; then
+  contest_id="${BASH_REMATCH[1]}"
+  problem_id=""
+elif [ -n "$2" ]; then
+  contest_id="$1"
+  problem_id="$2"
+else
+  contest_id="$1"
+  problem_id=""
+fi
 
-    contest_name="$1"
+if [ -n "$problem_id" ]; then
+  problem_dirname="$(jq -r \
+    --arg problem_id "$problem_id" \
+    '.tasks[] | select(.id == $problem_id) | .directory.path' \
+    "$contests_dir/$contest_id/contest.acc.json")"
+fi
+
+require_contest_id() {
+  if [ -z "$contest_id" ]; then
+    usage
+    exit 1
+  fi
+}
+
+require_problem_id() {
+  if [ -z "$problem_id" ]; then
+    usage
+    exit 1
+  fi
+}
+
+case "$subcommand" in
+  new)
+    require_contest_id
 
     cd "$contests_dir"
 
-    npx acc new "$contest_name" --choice none
+    npx acc new "$contest_id" --choice all
 
-    git checkout -b "$contest_name" origin/master
-    commit "$contest_name: init"
-    ;;
-
-  # atc next <contest-name>
-  next)
-    if [[ $# -eq 0 ]]; then
-      usage
-      exit 1
-    fi
-
-    contest_name="$1"
-
-    cd "$contests_dir/$contest_name"
-
-    npx acc add -c next
-
-    added_task="$(
-      jq -r \
-        'last(.tasks[] | select(.directory != null))' \
-        contest.acc.json
-    )"
-
-    problem_name="$(jq -r '.directory.path' <<< "$added_task")"
-
-    commit "$contest_name/$problem_name: init"
-
-    open "$(jq -r '.url' <<< "$added_task")"
+    commit "$contest_id: init"
     ;;
 
   # atc submit <contest-name> <problem-name>
   submit)
-    if [[ $# -ne 2 ]]; then
-      usage
-      exit 1
-    fi
+    require_contest_id
+    require_problem_id
 
-    contest_name="$1"
-    problem_name="$2"
-
-    cd "$contests_dir/$contest_name/$problem_name"
+    cd "$contests_dir/$contest_id/$problem_dirname"
 
     url="$(jq -r \
-      --arg dir "$problem_name" \
+      --arg dir "$problem_dirname" \
       '.tasks[] | select(.directory.path == $dir) | .url' \
-      "$contests_dir/$contest_name/contest.acc.json")"
+      "$contests_dir/$contest_id/contest.acc.json")"
 
     oj submit --yes "$url" main.rb
 
-    commit "$contest_name/$problem_name: submit"
+    commit "$contest_id/$problem_id: submit"
     ;;
 
   # open $EDITOR to edit the problem
   # usage: atc edit <contest-name> <problem-name>
   edit)
-    if [[ $# -ne 2 ]]; then
-      usage
-      exit 1
-    fi
+    require_contest_id
+    require_problem_id
 
-    contest_name="$1"
-    problem_name="$2"
-
-    cd "$contests_dir/$contest_name/$problem_name"
+    cd "$contests_dir/$contest_id/$problem_dirname"
 
     $EDITOR main.rb
     ;;
@@ -119,15 +134,10 @@ case "$subcommand" in
   # run test cases
   # usage: atc test <contest-name> <problem-name>
   test)
-    if [[ $# -ne 2 ]]; then
-      usage
-      exit 1
-    fi
+    require_contest_id
+    require_problem_id
 
-    contest_name="$1"
-    problem_name="$2"
-
-    cd "$contests_dir/$contest_name/$problem_name"
+    cd "$contests_dir/$contest_id/$problem_dirname"
 
     oj t -c 'ruby main.rb' -d 'tests'
     ;;
@@ -135,20 +145,15 @@ case "$subcommand" in
   # create a pull request
   # usage: atc create-pr <contest-name>
   create-pr)
-    if [[ $# -ne 1 ]]; then
-      usage
-      exit 1
-    fi
+    require_contest_id
 
-    contest_name="$1"
-
-    json="$contests_dir/$contest_name/contest.acc.json"
+    json="$contests_dir/$contest_id/contest.acc.json"
 
     gh pr create \
       --title "$(jq -r '.contest.id' "$json"): $(jq -r '.contest.title' "$json")" \
       --body "$(jq -r '.contest.url' "$json")" \
       --base master \
-      --head "$contest_name"
+      --head "$contest_id"
     ;;
 
   *)

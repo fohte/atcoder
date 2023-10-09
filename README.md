@@ -20,16 +20,17 @@ npx acc session
 ```bash
 # コンテスト用ディレクトリのセットアップ
 # (ディレクトリと contest.acc.json が作成される)
-npx acc new $contest_id
+scripts/atc new $contest_id
 
-cd $contest_id
+# コード書く流れ
+scripts/atc edit $contest_id $problem_id
 
-# 各問用のディレクトリと sample を作成
-npx acc add
+# テストケースを走らせる
+scripts/atc test $contest_id $problem_id
 
-cd $task_id
+# 提出
+scripts/atc submit $contest_id $problem_id
 
-# コード書く & 提出
-nvim $src_file
-npx acc submit $src_file
+# コンテスト参加後の PR 作成
+scripts/atc create-pr $contest_id
 ```
