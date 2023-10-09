@@ -7,7 +7,7 @@ usage() {
 Usage: ${0} <subcommand> <args>
 
 Subcommands:
-  new <contest-url|contest-id>
+  init <contest-url|contest-id>
     Initialize a new contest.
 
   submit <problem-url>
@@ -58,26 +58,31 @@ commit() {
 subcommand="$1"
 shift
 
-if [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+)/tasks/([a-z0-9_]+) ]]; then
+set -x
+
+if [ -f "$PWD/../contest.acc.json" ]; then # if cwd is a problem directory
+  contest_id="$(jq -r '.contest.id' "$PWD/../contest.acc.json")"
+  problem_id="$(jq -r --arg dir "$(basename "$PWD")" '.tasks[] | select(.directory.path == $dir) | .id' "$PWD/../contest.acc.json")"
+elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+)/tasks/([a-z0-9_]+) ]]; then # if the arguments are `<problem-url>`
   contest_id="${BASH_REMATCH[1]}"
   problem_id="${BASH_REMATCH[2]}"
-elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+) ]]; then
+elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+) ]]; then # if the arguments are `<contest-url>`
   contest_id="${BASH_REMATCH[1]}"
   problem_id=""
-elif [ -n "$2" ]; then
+elif [ $# -eq 2 ]; then # if the arguments are `<contest-id> <problem-id>`
   contest_id="$1"
   problem_id="$2"
-else
+else # if the arguments are `<contest-id>`
   contest_id="$1"
   problem_id=""
 fi
 
-if [ -n "$problem_id" ]; then
-  problem_dirname="$(jq -r \
+find_problem_dirname() {
+  jq -r \
     --arg problem_id "$problem_id" \
     '.tasks[] | select(.id == $problem_id) | .directory.path' \
-    "$contests_dir/$contest_id/contest.acc.json")"
-fi
+    "$contests_dir/$contest_id/contest.acc.json"
+}
 
 require_contest_id() {
   if [ -z "$contest_id" ]; then
@@ -106,6 +111,7 @@ case "$subcommand" in
   submit)
     require_contest_id
     require_problem_id
+    problem_dirname="$(find_problem_dirname)"
 
     cd "$contests_dir/$contest_id/$problem_dirname"
 
@@ -125,9 +131,11 @@ case "$subcommand" in
     require_contest_id
     require_problem_id
 
-    if [ ! -d "$contests_dir/$contest_id/$problem_dirname" ]; then
-      $0 init "$contest_id" "$problem_id"
+    if [ ! -d "$contests_dir/$contest_id" ]; then
+      $0 init "$contest_id"
     fi
+
+    problem_dirname="$(find_problem_dirname)"
 
     cd "$contests_dir/$contest_id/$problem_dirname"
 
@@ -141,6 +149,7 @@ case "$subcommand" in
   test)
     require_contest_id
     require_problem_id
+    problem_dirname="$(find_problem_dirname)"
 
     cd "$contests_dir/$contest_id/$problem_dirname"
 
