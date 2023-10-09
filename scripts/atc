@@ -58,8 +58,6 @@ commit() {
 subcommand="$1"
 shift
 
-set -x
-
 if [ -f "$PWD/../contest.acc.json" ]; then # if cwd is a problem directory
   contest_id="$(jq -r '.contest.id' "$PWD/../contest.acc.json")"
   problem_id="$(jq -r --arg dir "$(basename "$PWD")" '.tasks[] | select(.directory.path == $dir) | .id' "$PWD/../contest.acc.json")"
