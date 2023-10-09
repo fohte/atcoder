@@ -20,17 +20,27 @@ npx acc session
 ```bash
 # コンテスト用ディレクトリのセットアップ
 # (ディレクトリと contest.acc.json が作成される)
-scripts/atc new $contest_id
+atc init $contest_id
 
 # コード書く流れ
-scripts/atc edit $contest_id $problem_id
+atc edit $contest_id $problem_id
 
-# テストケースを走らせる
-scripts/atc test $contest_id $problem_id
+# テストケースを走らせる (edit で開いたエディター内であれば引数省略可能)
+atc test $contest_id $problem_id
 
-# 提出
-scripts/atc submit $contest_id $problem_id
+# 提出 (edit で開いたエディター内であれば引数省略可能)
+atc submit $contest_id $problem_id
 
 # コンテスト参加後の PR 作成
-scripts/atc create-pr $contest_id
+atc create-pr $contest_id
+```
+
+過去問を解くとき:
+
+```bash
+atc edit $problem_url
+
+# エディター内で実行:
+atc test
+atc submit
 ```
