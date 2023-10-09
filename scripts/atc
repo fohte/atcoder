@@ -50,8 +50,9 @@ contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
 
 commit() {
   message="$1"
+  shift
   git add "$contests_dir"
-  git commit -m "$message"
+  git commit -m "$message" "$@"
 }
 
 subcommand="$1"
@@ -93,14 +94,12 @@ require_problem_id() {
 }
 
 case "$subcommand" in
-  new)
+  init)
     require_contest_id
 
     cd "$contests_dir"
-
     npx acc new "$contest_id" --choice all
-
-    commit "$contest_id: init"
+    commit "$contest_id: init $(date --iso-8601=s)"
     ;;
 
   # atc submit <contest-name> <problem-name>
@@ -117,7 +116,7 @@ case "$subcommand" in
 
     oj submit --yes "$url" main.rb
 
-    commit "$contest_id/$problem_id: submit"
+    commit "$contest_id/$problem_id: submit $(date --iso-8601=s)"
     ;;
 
   # open $EDITOR to edit the problem
@@ -126,7 +125,13 @@ case "$subcommand" in
     require_contest_id
     require_problem_id
 
+    if [ ! -d "$contests_dir/$contest_id/$problem_dirname" ]; then
+      $0 init "$contest_id" "$problem_id"
+    fi
+
     cd "$contests_dir/$contest_id/$problem_dirname"
+
+    commit "$contest_id/$problem_id: start editting $(date --iso-8601=s)" --allow-empty
 
     $EDITOR main.rb
     ;;
