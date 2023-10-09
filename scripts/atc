@@ -3,19 +3,42 @@
 set -euo pipefail
 
 usage() {
-  cat << EOF
-Usage: $0 <command>
+  cat <<- EOM
+Usage: ${0} <subcommand> <args>
 
-Commands:
-  new <contest-name>      Create a new contest
-  next <contest-name>     Add a new problem to the contest
-  submit <contest-name> <problem-name>
-                          Submit the solution to the problem
-  edit <contest-name> <problem-name>
-                          Open $EDITOR to edit the problem
-  test <contest-name> <problem-name>
-                          Run test cases
-EOF
+Subcommands:
+  new <contest-url|contest-id>
+    Initialize a new contest.
+
+  submit <problem-url>
+  submit <contest-id> <problem-id>
+    Submit the solution for a problem.
+
+  edit <problem-url>
+  edit <contest-id> <problem-id>
+    Edit the solution for a problem using $EDITOR.
+
+  test <problem-url>
+  test <contest-id> <problem-id>
+    Test the solution for a problem.
+
+  create-pr <contest-url|contest-id>
+    Create a pull request for a contest.
+
+Arguments:
+  <contest-url>: URL of the contest (e.g., https://atcoder.jp/contests/abc123)
+  <problem-url>: URL of the problem (e.g., https://atcoder.jp/contests/abc123/tasks/problem_a)
+  <contest-id>: ID of the contest (e.g., abc123)
+  <problem-id>: ID of the problem (e.g., problem_a)
+
+Examples:
+  ${0} new https://atcoder.jp/contests/abc123
+  ${0} submit https://atcoder.jp/contests/abc123/tasks/problem_a
+  ${0} submit abc123 problem_a
+  ${0} edit abc123 problem_a
+  ${0} test abc123 problem_a
+  ${0} create-pr abc123
+EOM
 }
 
 if [[ $# -eq 0 ]]; then
