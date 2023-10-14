@@ -3,25 +3,27 @@ N = N.to_i
 S = N.times.map { gets.chomp }
 
 def ok?(s)
+  src = s.dup
   return true if s == T
 
   return false unless s.size == T.size || s.size == T.size + 1 || s.size == T.size - 1
 
   td = T.dup
   td.size.times do |i|
-    if s[i] == td[i]
-      s.slice!(i)
-      td.slice!(i)
-    end
+    break unless s[0] == td[0]
+
+    s.slice!(0)
+    td.slice!(0)
+  end
+  td.size.times do |i|
+    break unless s[-1] == td[-1]
+
+    s.slice!(-1)
+    td.slice!(-1)
   end
 
-  (td.size + 1).times do |i|
-    return true if s.size == td.size && i < s.size && s.dup.tap { |s| s[i] = td[i] } == td
+  return true if (td.size == 1 && s.size == 0) || (td.size == 0 && s.size == 1) || (td.size == 1 && s.size == 1)
 
-    return true if s.size == td.size + 1 && i < s.size && (s.dup.tap { |s| s.slice!(i) } == td)
-
-    return true if s.size == td.size - 1 && i < td.size && (td.dup.tap { |s| s.slice!(i) } == s)
-  end
   false
 end
 
