@@ -5,24 +5,13 @@ S = N.times.map { gets.chomp }
 def ok?(t)
   return true if t == T
 
-  if t.size == T.size
-    t.chars.each_with_index do |c, i|
-      return true if t.dup.tap { |s| s[i] = T[i] } == T
-    end
-  end
+  (T.size + 1).times do |i|
+    return true if t.size == T.size && i < t.size && t.dup.tap { |s| s[i] = T[i] } == T
 
-  if t.size == T.size + 1
-    t.chars.each_with_index do |c, i|
-      return true if t.dup.tap { |s| s.slice!(i) } == T
-    end
-  end
+    return true if t.size == T.size + 1 && i < t.size && (t.dup.tap { |s| s.slice!(i) } == T)
 
-  if t.size == T.size - 1
-    T.chars.each_with_index do |c, i|
-      return true if T.dup.tap { |s| s.slice!(i) } == t
-    end
+    return true if t.size == T.size - 1 && i < T.size && (T.dup.tap { |s| s.slice!(i) } == t)
   end
-
   false
 end
 
