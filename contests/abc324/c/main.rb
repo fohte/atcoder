@@ -2,15 +2,25 @@ N, T = gets.chomp.split
 N = N.to_i
 S = N.times.map { gets.chomp }
 
-def ok?(t)
-  return true if t == T
+def ok?(s)
+  return true if s == T
 
-  (T.size + 1).times do |i|
-    return true if t.size == T.size && i < t.size && t.dup.tap { |s| s[i] = T[i] } == T
+  return false unless s.size == T.size || s.size == T.size + 1 || s.size == T.size - 1
 
-    return true if t.size == T.size + 1 && i < t.size && (t.dup.tap { |s| s.slice!(i) } == T)
+  td = T.dup
+  td.size.times do |i|
+    if s[i] == td[i]
+      s.slice!(i)
+      td.slice!(i)
+    end
+  end
 
-    return true if t.size == T.size - 1 && i < T.size && (T.dup.tap { |s| s.slice!(i) } == t)
+  (td.size + 1).times do |i|
+    return true if s.size == td.size && i < s.size && s.dup.tap { |s| s[i] = td[i] } == td
+
+    return true if s.size == td.size + 1 && i < s.size && (s.dup.tap { |s| s.slice!(i) } == td)
+
+    return true if s.size == td.size - 1 && i < td.size && (td.dup.tap { |s| s.slice!(i) } == s)
   end
   false
 end
