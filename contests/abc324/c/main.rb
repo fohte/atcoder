@@ -19,7 +19,10 @@ def ok?(s)
     end_index += 1
   end
 
-  return true if s.size - start_index - end_index <= 1
+  return true if start_index == s.size && s.size == T.size
+  return true if start_index + end_index >= s.size && s.size + 1 == T.size
+  return true if start_index + end_index >= s.size - 1 && s.size - 1 == T.size
+  return true if start_index + end_index == s.size - 1 && s.size == T.size
 
   false
 end
