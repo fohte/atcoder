@@ -14,7 +14,7 @@ def ok?(s)
 
   end_index = 0
   T.size.times do
-    break unless s[-(end_index + 1)] == T[-(end_index + 1)]
+    break unless s[start_index..][-(end_index + 1)] == T[start_index..][-(end_index + 1)]
 
     end_index += 1
   end
