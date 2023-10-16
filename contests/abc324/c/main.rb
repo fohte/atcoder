@@ -5,8 +5,6 @@ S = N.times.map { gets.chomp }
 def ok?(s)
   return true if s == T
 
-  return false unless s.size == T.size || s.size == T.size + 1 || s.size == T.size - 1
-
   start_index = 0
   T.size.times do
     break unless s[start_index] == T[start_index]
