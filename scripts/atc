@@ -113,6 +113,11 @@ case "$subcommand" in
 
     cd "$contests_dir/$contest_id/$problem_dirname"
 
+    if ! $0 test; then
+      echo "Failed to pass all test cases"
+      exit 1
+    fi
+
     url="$(jq -r \
       --arg dir "$problem_dirname" \
       '.tasks[] | select(.directory.path == $dir) | .url' \
