@@ -61,7 +61,7 @@ shift
 if [ -f "$PWD/../contest.acc.json" ]; then # if cwd is a problem directory
   contest_id="$(jq -r '.contest.id' "$PWD/../contest.acc.json")"
   problem_id="$(jq -r --arg dir "$(basename "$PWD")" '.tasks[] | select(.directory.path == $dir) | .id' "$PWD/../contest.acc.json")"
-elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+)/tasks/([a-z0-9_]+) ]]; then # if the arguments are `<problem-url>`
+elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9_\-]+)/tasks/([a-z0-9_\-]+) ]]; then # if the arguments are `<problem-url>`
   contest_id="${BASH_REMATCH[1]}"
   problem_id="${BASH_REMATCH[2]}"
 elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+) ]]; then # if the arguments are `<contest-url>`
