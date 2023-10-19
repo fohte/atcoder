@@ -144,6 +144,8 @@ case "$subcommand" in
 
     commit "$contest_id/$problem_id: start editting $(date --iso-8601=s)" --allow-empty
 
+    open "$(jq -r --arg problem_id "$problem_id" '.tasks[] | select(.id == $problem_id) | .url' "$contests_dir/$contest_id/contest.acc.json")"
+
     $EDITOR main.rb
     ;;
 
