@@ -9,3 +9,9 @@ Lint:
 
 Style/FrozenStringLiteralComment:
   Enabled: false
+
+Style/NumericPredicate:
+  Enabled: false
+
+Style/ZeroLengthPredicate:
+  Enabled: false
