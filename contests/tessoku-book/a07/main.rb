@@ -8,8 +8,8 @@ N.times.each do |i|
   SD[r] -= 1
 end
 
-S = SD.each_with_object([0]) do |x, a|
-  a << a.last + x
+S = SD.each_with_object([]) do |x, a|
+  a << (a.last || 0) + x
 end
 
-puts S[1..]
+puts S
