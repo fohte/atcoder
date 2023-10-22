@@ -1,182 +1,185 @@
-#!/usr/bin/env bash
+#!/usr/bin/env ruby
 
-set -euo pipefail
+require 'json'
+require 'optparse'
+require 'time'
+require 'shellwords'
 
-usage() {
-  cat <<- EOM
-Usage: ${0} <subcommand> <args>
+CONTESTS_DIR = File.expand_path('../contests', __dir__)
 
-Subcommands:
-  init <contest-url|contest-id>
-    Initialize a new contest.
+class CLI
+  SUBCOMMANDS = {
+    'init' => OptionParser.new do |opt|
+      opt.banner = 'Usage: init <contest-url|contest-id>'
+    end,
+    'submit' => OptionParser.new do |opt|
+      opt.banner = 'Usage: submit <problem-url> OR submit <contest-id> <problem-id>'
+    end,
+    'edit' => OptionParser.new do |opt|
+      opt.banner = 'Usage: edit <problem-url> OR edit <contest-id> <problem-id>'
+    end,
+    'test' => OptionParser.new do |opt|
+      opt.banner = 'Usage: test <problem-url> OR test <contest-id> <problem-id>'
+    end,
+    'create-pr' => OptionParser.new do |opt|
+      opt.banner = 'Usage: create-pr <contest-url|contest-id>'
+    end
+  }
 
-  submit <problem-url>
-  submit <contest-id> <problem-id>
-    Submit the solution for a problem.
+  def initialize
+    @options = {}
+    @parser = OptionParser.new
+    @parser.banner = "Usage: #{$PROGRAM_NAME} [options] <subcommand> [options]"
+    @parser.separator ''
+    @parser.separator 'Subcommands:'
+    @parser.separator SUBCOMMANDS.keys
+    @parser.separator ''
+    @parser.separator "For help on each subcommand: #{$PROGRAM_NAME} <subcommand> -h"
+  end
 
-  edit <problem-url>
-  edit <contest-id> <problem-id>
-    Edit the solution for a problem using $EDITOR.
+  def parse(argv)
+    subcommand, *args = argv
+    unless SUBCOMMANDS[subcommand]
+      puts @parser.help
+      exit(1)
+    end
 
-  test <problem-url>
-  test <contest-id> <problem-id>
-    Test the solution for a problem.
+    sub_args = SUBCOMMANDS[subcommand].parse(args)
+    parse_subcommand(subcommand, sub_args)
+  end
 
-  create-pr <contest-url|contest-id>
-    Create a pull request for a contest.
+  private
 
-Arguments:
-  <contest-url>: URL of the contest (e.g., https://atcoder.jp/contests/abc123)
-  <problem-url>: URL of the problem (e.g., https://atcoder.jp/contests/abc123/tasks/problem_a)
-  <contest-id>: ID of the contest (e.g., abc123)
-  <problem-id>: ID of the problem (e.g., problem_a)
+  def commit(message, options = [])
+    system(%W[git add #{CONTESTS_DIR}].shelljoin) or raise 'Failed to add files to git'
+    system((%W[git commit -m #{message}] + options).shelljoin) or raise 'Failed to commit'
+  end
 
-Examples:
-  ${0} new https://atcoder.jp/contests/abc123
-  ${0} submit https://atcoder.jp/contests/abc123/tasks/problem_a
-  ${0} submit abc123 problem_a
-  ${0} edit abc123 problem_a
-  ${0} test abc123 problem_a
-  ${0} create-pr abc123
-EOM
-}
+  def parse_subcommand(subcommand, argv)
+    problem = Problem.parse_args(argv)
+    case subcommand
+    when 'init'
+      Dir.chdir(CONTESTS_DIR) do
+        system(%W[npx acc new #{problem.contest_id} --choice all].shelljoin) or raise 'Failed to initialize new contest'
+        commit("#{problem.contest_id}: init #{Time.now.iso8601}")
+      end
 
-if [[ $# -eq 0 ]]; then
-  usage
-  exit 1
-fi
+    when 'submit'
+      problem.valid_dir!
 
-contests_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../contests" && pwd)"
+      Dir.chdir(problem.path) do
+        parse_subcommand('test', [problem.contest_id, problem.id])
 
-commit() {
-  message="$1"
-  shift
-  git add "$contests_dir"
-  git commit -m "$message" "$@"
-}
+        system(%W[oj submit --yes #{problem.url} main.rb].shelljoin) or raise 'Failed to submit'
+        commit("#{problem.contest_id}/#{problem.id}: submit #{Time.now.iso8601}")
+      end
 
-subcommand="$1"
-shift
+    when 'edit'
+      problem.valid_dir!
 
-if [ -f "$PWD/../contest.acc.json" ]; then # if cwd is a problem directory
-  contest_id="$(jq -r '.contest.id' "$PWD/../contest.acc.json")"
-  problem_id="$(jq -r --arg dir "$(basename "$PWD")" '.tasks[] | select(.directory.path == $dir) | .id' "$PWD/../contest.acc.json")"
-elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9_\-]+)/tasks/([a-z0-9_\-]+) ]]; then # if the arguments are `<problem-url>`
-  contest_id="${BASH_REMATCH[1]}"
-  problem_id="${BASH_REMATCH[2]}"
-elif [[ $1 =~ https://atcoder.jp/contests/([a-z0-9]+) ]]; then # if the arguments are `<contest-url>`
-  contest_id="${BASH_REMATCH[1]}"
-  problem_id=""
-elif [ $# -eq 2 ]; then # if the arguments are `<contest-id> <problem-id>`
-  contest_id="$1"
-  problem_id="$2"
-else # if the arguments are `<contest-id>`
-  contest_id="$1"
-  problem_id=""
-fi
+      Dir.chdir(problem.path) do
+        commit("#{problem.contest_id}/#{problem.id}: start editing #{Time.now.iso8601}", %w[--allow-empty])
+        system(%W[open #{problem.url}].shelljoin) or raise 'Failed to open problem URL'
+        system(%W[#{ENV['EDITOR']} main.rb].shelljoin) or raise 'Failed to open editor'
+      end
 
-find_problem_dirname() {
-  jq -r \
-    --arg problem_id "$problem_id" \
-    '.tasks[] | select(.id == $problem_id) | .directory.path' \
-    "$contests_dir/$contest_id/contest.acc.json"
-}
+    when 'test'
+      problem.valid_dir!
 
-require_contest_id() {
-  if [ -z "$contest_id" ]; then
-    usage
-    exit 1
-  fi
-}
+      Dir.chdir(problem.path) do
+        system(['oj', 't', '-c', 'ruby main.rb', '-d', 'tests'].shelljoin) or raise 'Failed to pass all test cases'
+      end
 
-require_problem_id() {
-  if [ -z "$problem_id" ]; then
-    usage
-    exit 1
-  fi
-}
+    else
+      puts @parser.help
+      exit(1)
+    end
+  end
+end
 
-case "$subcommand" in
-  init)
-    require_contest_id
+class Problem
+  attr_reader :contest_id
 
-    cd "$contests_dir"
-    npx acc new "$contest_id" --choice all
-    commit "$contest_id: init $(date --iso-8601=s)"
-    ;;
+  class << self
+    def parse_args(args)
+      if args.size == 0
+        from_pwd
+      elsif args.size == 1 && args.first.start_with?('https://atcoder.jp/contests/')
+        from_url(args.first)
+      elsif args.size == 1
+        new(args.first, nil)
+      elsif args.size == 2
+        contest_id, problem_id_or_label = args
+        new(
+          contest_id,
+          find_problem(contest_id, problem_id_or_label)
+        )
+      else
+        raise 'Invalid number of arguments'
+      end
+    end
 
-  # atc submit <contest-name> <problem-name>
-  submit)
-    require_contest_id
-    require_problem_id
-    problem_dirname="$(find_problem_dirname)"
+    private
 
-    cd "$contests_dir/$contest_id/$problem_dirname"
+    def from_pwd
+      contest_acc_json_path = File.expand_path('../contest.acc.json', Dir.pwd)
+      raise 'Problem directory not found' unless File.exist?(contest_acc_json_path)
 
-    if ! $0 test; then
-      echo "Failed to pass all test cases"
-      exit 1
-    fi
+      contest_acc_json = JSON.parse(File.read(contest_acc_json_path))
+      contest_id = contest_acc_json.dig('contest', 'id')
+      preblem = contest_acc_json['tasks'].find { |task| task['directory']['path'] == File.basename(Dir.pwd) }
+      new(contest_id, preblem)
+    end
 
-    url="$(jq -r \
-      --arg dir "$problem_dirname" \
-      '.tasks[] | select(.directory.path == $dir) | .url' \
-      "$contests_dir/$contest_id/contest.acc.json")"
+    def from_url(url)
+      m = url.match(%r{https://atcoder.jp/contests/([^/]+)/tasks/([^/]+)})
 
-    oj submit --yes "$url" main.rb
+      contest_id = m[1]
+      problem_id = m[2]
 
-    commit "$contest_id/$problem_id: submit $(date --iso-8601=s)"
-    ;;
+      new(contest_id, find_problem(contest_id, problem_id: problem_id))
+    end
 
-  # open $EDITOR to edit the problem
-  # usage: atc edit <contest-name> <problem-name>
-  edit)
-    require_contest_id
-    require_problem_id
+    def parse_contest_json(contest_id)
+      JSON.parse(File.read("#{CONTESTS_DIR}/#{contest_id}/contest.acc.json"))
+    end
 
-    if [ ! -d "$contests_dir/$contest_id" ]; then
-      $0 init "$contest_id"
-    fi
+    def find_problem(contest_id, problem_id_or_label)
+      parse_contest_json(contest_id)['tasks'].find do |task|
+        task['id'].downcase == problem_id_or_label.downcase || task['label'].downcase == problem_id_or_label.downcase
+      end
+    end
+  end
 
-    problem_dirname="$(find_problem_dirname)"
+  def initialize(contest_id, problem)
+    @contest_id = contest_id
+    @problem = problem
+  end
 
-    cd "$contests_dir/$contest_id/$problem_dirname"
+  def valid_problem!
+    raise 'Problem not found' if @problem.nil?
+  end
 
-    commit "$contest_id/$problem_id: start editting $(date --iso-8601=s)" --allow-empty
+  def valid_dir!
+    valid_problem!
+    raise 'Problem directory not found' if dirname.nil?
+  end
 
-    open "$(jq -r --arg problem_id "$problem_id" '.tasks[] | select(.id == $problem_id) | .url' "$contests_dir/$contest_id/contest.acc.json")"
+  def dirname
+    @problem&.dig('directory', 'path')
+  end
 
-    $EDITOR main.rb
-    ;;
+  def path
+    "#{CONTESTS_DIR}/#{contest_id}/#{dirname}"
+  end
 
-  # run test cases
-  # usage: atc test <contest-name> <problem-name>
-  test)
-    require_contest_id
-    require_problem_id
-    problem_dirname="$(find_problem_dirname)"
+  def id
+    @problem&.dig('id')
+  end
 
-    cd "$contests_dir/$contest_id/$problem_dirname"
+  def url
+    @problem&.dig('url')
+  end
+end
 
-    oj t -c 'ruby main.rb' -d 'tests'
-    ;;
-
-  # create a pull request
-  # usage: atc create-pr <contest-name>
-  create-pr)
-    require_contest_id
-
-    json="$contests_dir/$contest_id/contest.acc.json"
-
-    gh pr create \
-      --title "$(jq -r '.contest.id' "$json"): $(jq -r '.contest.title' "$json")" \
-      --body "$(jq -r '.contest.url' "$json")" \
-      --base master \
-      --head "$contest_id"
-    ;;
-
-  *)
-    usage
-    exit 1
-    ;;
-esac
+CLI.new.parse(ARGV)
