@@ -19,5 +19,5 @@ Q = gets.to_i
 
 Q.times do
   a, b, c, d = gets.split.map(&:to_i)
-  puts S[d][c] + S[b - 1][a - 1] - S[d][a - 1] - S[b - 1][c]
+  puts S[c][d] + S[a - 1][b - 1] - S[a - 1][d] - S[c][b - 1]
 end
