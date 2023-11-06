@@ -5,7 +5,7 @@ x_max = XY.max_by { |x, _| x }[0]
 y_max = XY.max_by { |_, y| y }[1]
 
 MAP = Array.new(x_max) { Array.new(y_max, 0) }
-XY.each { |x, y| MAP[x - 1][y - 1] = 1 }
+XY.each { |x, y| MAP[x - 1][y - 1] += 1 }
 
 S = Array.new(x_max + 1) { Array.new(y_max + 1, 0) }
 
