@@ -9,11 +9,6 @@ T = Array.new(H + 1) { Array.new(W + 1, 0) }
 S = Array.new(H + 1) { Array.new(W + 1, 0) }
 
 ABCD.each do |a, b, c, d|
-  a -= 1
-  b -= 1
-  c -= 1
-  d -= 1
-
   T[a][b] += 1
   T[a][d] -= 1
   T[c][b] -= 1
