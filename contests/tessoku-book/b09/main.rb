@@ -2,11 +2,11 @@ N = gets.to_i
 
 ABCD = Array.new(N) { gets.split.map(&:to_i) }
 
-H = ABCD.flat_map { |a, b, c, d| [b, d] }.max
-W = ABCD.flat_map { |a, b, c, d| [a, c] }.max
+W = ABCD.flat_map { |a, b, c, d| [b, d] }.max
+H = ABCD.flat_map { |a, b, c, d| [a, c] }.max
 
-T = Array.new(H + 2) { Array.new(W + 2, 0) }
-S = Array.new(H + 2) { Array.new(W + 2, 0) }
+T = Array.new(H + 1) { Array.new(W + 1, 0) }
+S = Array.new(H + 1) { Array.new(W + 1, 0) }
 
 ABCD.each do |a, b, c, d|
   a -= 1
