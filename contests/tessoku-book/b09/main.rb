@@ -17,7 +17,7 @@ end
 
 (1..H).each do |y|
   (1..W).each do |x|
-    S[y][x] = S[y][x - 1] + T[y - 1][x - 1]
+    S[y][x] = S[y][x - 1] + T[y][x]
   end
 end
 
