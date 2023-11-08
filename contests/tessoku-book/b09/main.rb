@@ -2,8 +2,8 @@ N = gets.to_i
 
 ABCD = Array.new(N) { gets.split.map(&:to_i) }
 
-H = ABCD.max_by { |a, b, c, d| d }[3]
-W = ABCD.max_by { |a, b, c, d| c }[2]
+H = ABCD.flat_map { |a, b, c, d| [b, d] }.max
+W = ABCD.flat_map { |a, b, c, d| [a, c] }.max
 
 T = Array.new(H + 1) { Array.new(W + 1, 0) }
 S = Array.new(H + 1) { Array.new(W + 1, 0) }
