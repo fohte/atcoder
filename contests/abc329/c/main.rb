@@ -1,17 +1,20 @@
 N = gets.to_i
 S = gets.chomp
 
-substr = []
+substr = {}
 
+current_count = 0
 prev_c = nil
-S.chars.each do |c|
-  substr << if c == prev_c
-              substr.last + c
-            else
-              c
-            end
+(N + 1).times do |i|
+  c = S[i]
+  if !c.nil? && c == prev_c
+    current_count += 1
+  else
+    substr[prev_c] = current_count if !prev_c.nil? && (substr[prev_c].nil? || substr[prev_c] < current_count)
+    current_count = 1
+  end
 
   prev_c = c
 end
 
-p substr.uniq.size
+p substr.values.sum
